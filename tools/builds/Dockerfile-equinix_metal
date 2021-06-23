@@ -1,0 +1,10 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+RUN microdnf install -y python3
+
+LABEL maintainer="Guillaume Core (fridim) <gucore@redhat.com>"
+
+RUN pip3 install --upgrade pip
+RUN pip3 install ansible==2.9.22
+RUN pip3 install packet-python jmespath
+
+USER ${USER_UID}
