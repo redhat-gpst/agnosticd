@@ -1,0 +1,6 @@
+---
+- name: Create devices
+  loop: "{{ instances }}"
+  loop_control:
+    loop_var: _instance
+  include_tasks: create_instance.yaml

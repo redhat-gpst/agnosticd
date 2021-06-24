@@ -1,0 +1,17 @@
+---
+type: array
+items:
+  type: object
+  properties:
+    name:
+      type: string
+    type:
+      type: string
+    count:
+      type:
+        - number
+        - string
+  required:
+    - name
+    - type
+    - count
