@@ -7,7 +7,7 @@
     loop_var: _instance
     label: _instance.name
   vars:
-  packet_device:
+  community.general.packet_device:
     wait_for_public_IPv: 4
     auth_token: "{{ equinix_metal_api_token }}"
     project_id: "{{ equinix_metal_project_id }}"
@@ -28,3 +28,4 @@
 
 - debug:
     var: r_devices
+    verbosity: 3

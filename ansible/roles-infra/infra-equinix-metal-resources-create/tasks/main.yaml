@@ -1,3 +1,0 @@
----
-- include_tasks: ssh_key.yaml
-- include_tasks: create_instances.yaml

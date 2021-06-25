@@ -2,34 +2,33 @@
 - name: Generate SSH keys
   command: >-
     ssh-keygen -b 2048 -t rsa -q -N ""
-    -f "{{ output_dir }}/{{ guid }}_id_rsa"
+    -f {{ equinix_metal_ssh_key_path | quote }}
   args:
-    creates: "{{ output_dir }}/{{ guid }}_id_rsa"
+    creates: "{{ equinix_metal_ssh_key_path }}"
 
 - name: Set permission
   file:
-    path: "{{ output_dir }}/{{ guid }}_id_rsa"
+    path: "{{ equinix_metal_ssh_key_path }}"
     mode: 0400
 
 - name: Generate SSH pub key
   shell: >-
-    ssh-keygen -y -f "{{ output_dir }}/{{ guid }}_id_rsa"
-    > "{{ output_dir }}/{{ guid }}_id_rsa.pub"
+    ssh-keygen -y -f {{ equinix_metal_ssh_key_path | quote }}
+    > {{ equinix_metal_ssh_pub_key_path | quote }}
   args:
-    creates: "{{output_dir}}/{{ guid }}_id_rsa.pub"
+    creates: "{{ equinix_metal_ssh_pub_key_path }}"
 
 - name: Set permission
   file:
-    path: "{{ output_dir }}/{{ guid }}_id_rsa.pub"
+    path: "{{ equinix_metal_ssh_pub_key_path }}"
     mode: 0400
 
-# Doesn't work for project ssh keys
+# Community module doesn't work for project-ssh-keys
 # - name: Create SSH key file
 #   packet_sshkey:
 #     auth_token: "{{ equinix_metal_api_token }}"
-#     key_file: "{{ output_dir }}/{{ guid }}_id_rsa.pub"
+#     key_file: "{{ equinix_metal_ssh_pub_key_path }}"
 #     label: "{{ guid }}"
-#
 
 # https://metal.equinix.com/developers/api/ssh-keys/
 - name: Create SSH key for project
@@ -50,9 +49,7 @@
     body_format: json
     body:
       label: "{{ guid }}"
-      key: >-
-        {{ lookup('file',
-        output_dir + "/" + guid + "_id_rsa.pub") }}
+      key: "{{ lookup('file', equinix_metal_ssh_pub_key_path) }}"
   register: r_key
   retries: "{{ equinix_metal_api_retries }}"
   delay: "{{ equinix_metal_api_delay }}"

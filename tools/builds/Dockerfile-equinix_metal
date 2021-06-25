@@ -4,7 +4,6 @@ RUN microdnf install -y python3 openssh
 LABEL maintainer="Guillaume Core (fridim) <gucore@redhat.com>"
 
 RUN pip3 install --upgrade pip
-RUN pip3 install ansible==4.1.0 jmespath jsonschema
-RUN pip3 install packet-python
+RUN pip3 install ansible==2.9.22 jmespath jsonschema packet-python
 
 USER ${USER_UID}
