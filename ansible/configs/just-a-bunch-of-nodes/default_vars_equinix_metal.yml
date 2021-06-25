@@ -1,0 +1,16 @@
+---
+# Environment Instances
+instances:
+  - name: "hypervisor"
+    count: 1
+    unique: true
+    public_dns: true
+    dns_loadbalancer: false
+    type: c3.small.x86
+    os: centos_8
+    facility: am6
+    tags:
+      - key: "AnsibleGroup"
+        value: "bastions,hypervisors"
+      - key: "ostype"
+        value: "linux"

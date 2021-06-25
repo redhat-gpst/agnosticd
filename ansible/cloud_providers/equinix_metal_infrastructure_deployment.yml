@@ -1,0 +1,106 @@
+---
+- import_playbook: equinix_metal_pre_checks.yml
+
+- name: Step 001.1 Deploy Infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tags:
+    - step001
+    - step001.1
+    - deploy_infrastructure
+    - infra
+    - infra_tasks
+  tasks:
+    - name: Install community.general collection for packet modules
+      command: >-
+        ansible-galaxy collection install -p collections community.general
+
+    - name: Run infra-equinix-metal-project-create
+      include_role:
+        name: infra-equinix-metal-project-create
+
+    - name: Run infra-equinix-metal-resources-create Role
+      include_role:
+        name: infra-equinix-metal-resources-create
+
+- name: Step 001.2 Create Inventory and SSH config setup
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tags:
+    - step001
+    - step001.2
+    - create_inventory
+    - create_ssh_config
+  tasks:
+    - name: Run infra-equinix-metal-create-inventory Role
+      import_role:
+        name: infra-equinix-metal-create-inventory
+
+    - name: Run Common SSH Config Generator Role
+      import_role:
+        name: infra-common-ssh-config-generate
+
+# include global vars again, this time for all hosts now that the inventory is built
+- import_playbook: ../include_vars.yml
+  tags:
+    - create_inventory
+    - must
+
+- name: Step 001.3 Configure Linux Hosts and Wait for Connection
+  hosts:
+    - all:!windows:!network
+  gather_facts: false
+  any_errors_fatal: true
+  ignore_errors: false
+  become: true
+  tags:
+    - step001
+    - step001.3
+    - wait_ssh
+    - set_hostname
+  tasks:
+    - name: set facts for remote access
+      tags:
+        - create_inventory
+      set_fact:
+        ansible_ssh_extra_args: "{{ ansible_ssh_extra_args|d() }} -F {{output_dir}}/{{ env_type }}_{{ guid }}_ssh_conf"
+
+    - name: Run infra-ec2-wait_for_linux_hosts Role
+      import_role:
+        name: infra-ec2-wait_for_linux_hosts
+
+    - name: Run infra-ec2-linux-set-hostname Role
+      import_role:
+        name: infra-ec2-linux-set-hostname
+
+- name: Step 001.4 Configure Windows Hosts and Wait for Connection
+  gather_facts: false
+  hosts:
+    - windows
+  tags:
+    - step001
+    - step001.4
+  tasks:
+    - name: set facts for remote access
+      tags:
+        - create_inventory
+      set_fact:
+        ansible_become: false
+        ansible_connection: winrm
+        ansible_host: "{{ public_dns_name }}"
+        ansible_password: "{{ hostvars['localhost'].windows_password | default(hostvars['localhost'].generated_windows_password) }}"
+        ansible_port: 5986
+        ansible_user: Administrator
+        ansible_winrm_server_cert_validation: ignore
+
+    - name: Run infra-ec2-wait_for_linux_hosts Role
+      import_role:
+        name: infra-ec2-wait_for_windows_hosts
+
+    - name: Set output_dir for all windows hosts
+      set_fact:
+        output_dir: "{{ hostvars.localhost.output_dir }}"

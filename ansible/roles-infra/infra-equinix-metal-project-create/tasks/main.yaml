@@ -1,12 +1,9 @@
 ---
-
-#- name: Create new project
-  #hosts: localhost
-  #tasks:
-    #community.general.packet_project:
-      #name: "{{ equinix_metal_project_name }}"
-      #org_id: "{{ equinix_metal_organization_id }}"
-      #payment_method: "{{ equinix_metal_payment_method_id }}"
+# - name: Create Equinix Metal project
+#   kacket_project:
+#     name: "{{ equinix_metal_project_name }}"
+#     org_id: "{{ equinix_metal_organization_id }}"
+#     payment_method: "{{ equinix_metal_payment_method_id }}"
 # https://metal.equinix.com/developers/api/projects/
 - name: Lookup for project
   changed_when: false
