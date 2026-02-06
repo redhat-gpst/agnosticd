@@ -1,6 +1,4 @@
 ---
-# Implement your Workload deployment tasks here
-
 - name: Setting up workload for user
   ansible.builtin.debug:
     msg: "Setting up workload for user ocp_username = {{ ocp_username }}"
@@ -27,7 +25,7 @@
 
 - name: Update CertManager for EC2/GCP/Azure to use external DNS
   when: >
-    ocp4_workload_cert_manager_cloud_provider in ["ec2", "gcp", "azure"]
+    ocp4_workload_cert_manager_cloud_provider in ["ec2", "gcp", "azure", "acme-bifrost"]
   kubernetes.core.k8s:
     state: present
     definition: "{{ lookup('template', 'certmanager.yaml.j2') }}"
@@ -57,8 +55,7 @@
 - name: Print API and wildcard domain
   ansible.builtin.debug:
     msg: >-
-      API: {{ _ocp4_workload_cert_manager_api_hostname }},
-      Wildcard Domain: *.{{ _ocp4_workload_cert_manager_wildcard_domain }}
+      API: {{ _ocp4_workload_cert_manager_api_hostname }}, Wildcard Domain: *.{{ _ocp4_workload_cert_manager_wildcard_domain }}
 
 - name: Wait until CertManager is ready
   kubernetes.core.k8s_info:
@@ -81,6 +78,48 @@
 
 - name: Set up cloud provider specific prerequisites for cert manager
   ansible.builtin.include_tasks: "cert_manager_{{ ocp4_workload_cert_manager_cloud_provider }}.yml"
+
+
+- name: Deploy ACME Bifrost webhook
+  when: ocp4_workload_cert_manager_provider == "acme-bifrost" or ocp4_workload_cert_manager_provider_fallback == "acme-bifrost"
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'webhook_acme_bifrost.yaml.j2') }}"
+  register: r_webhook_acme_bifrost
+  retries: 10
+  delay: 30
+  until: r_webhook_acme_bifrost is success
+
+- name: Wait for acme-bifrost-webhook deployment to be ready
+  when: ocp4_workload_cert_manager_provider == "acme-bifrost" or ocp4_workload_cert_manager_provider_fallback == "acme-bifrost"
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: acme-bifrost-webhook
+    namespace: cert-manager
+  register: r_webhook_deployment
+  until:
+  - r_webhook_deployment.resources | length > 0
+  - r_webhook_deployment.resources[0].status.readyReplicas is defined
+  - r_webhook_deployment.resources[0].status.readyReplicas == r_webhook_deployment.resources[0].spec.replicas
+  retries: 30
+  delay: 10
+
+- name: Wait for webhook APIService to be available
+  when: ocp4_workload_cert_manager_provider == "acme-bifrost" or ocp4_workload_cert_manager_provider_fallback == "acme-bifrost"
+  kubernetes.core.k8s_info:
+    api_version: apiregistration.k8s.io/v1
+    kind: APIService
+    name: v1alpha1.bifrost.demo.redhat.com
+  register: r_webhook_apiservice
+  until:
+  - r_webhook_apiservice.resources | length > 0
+  - >-
+    r_webhook_apiservice.resources[0].status.conditions |
+    selectattr('type', 'equalto', 'Available') |
+    selectattr('status', 'equalto', 'True') | list | length > 0
+  retries: 30
+  delay: 10
 
 - name: Set up ClusterIssuer and request certificates
   kubernetes.core.k8s:
@@ -111,7 +150,6 @@
     ingress_cert_retry_counter: 0
     ingress_cert_max_retries: 3
   block:
-
   - name: Run ingress controller certificate check task
     ansible.builtin.include_tasks: cert_manager_ingress_cert_check.yml
     with_sequence: start=0 end={{ ingress_cert_max_retries }}

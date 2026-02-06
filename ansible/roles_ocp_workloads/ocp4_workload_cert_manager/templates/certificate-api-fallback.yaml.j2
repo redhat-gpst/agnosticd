@@ -12,10 +12,9 @@ spec:
   renewBefore: 360h
   usages:
   - server auth
-  - client auth
   dnsNames:
   - "{{ _ocp4_workload_cert_manager_api_hostname }}"
   issuerRef:
     kind: ClusterIssuer
-    name: {{ ocp4_workload_cert_manager_provider_fallback }}-production-{{ ocp4_workload_cert_manager_cloud_provider }}
+    name: {{ ocp4_workload_cert_manager_provider_fallback }}-production-{{ ocp4_workload_cert_manager_cloud_provider }}-fallback
     group: cert-manager.io
